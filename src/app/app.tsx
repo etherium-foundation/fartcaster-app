@@ -1,15 +1,32 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { useMiniApp } from "@neynar/react";
+import FrameEditor from "~/components/FrameEditor";
 import { APP_NAME } from "~/lib/constants";
-
-// note: dynamic import is required for components that use the Frame SDK
-const Demo = dynamic(() => import("~/components/Demo"), {
-  ssr: false,
-});
 
 export default function App(
   { title }: { title?: string } = { title: APP_NAME }
 ) {
-  return <Demo title={title} />;
+  const { isSDKLoaded, context } = useMiniApp();
+
+  if (!isSDKLoaded) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <div
+      style={{
+        paddingTop: context?.client.safeAreaInsets?.top ?? 0,
+        paddingBottom: context?.client.safeAreaInsets?.bottom ?? 0,
+        paddingLeft: context?.client.safeAreaInsets?.left ?? 0,
+        paddingRight: context?.client.safeAreaInsets?.right ?? 0,
+      }}
+    >
+      <div className="mx-auto py-2 px-4">
+        <h1 className="text-2xl font-bold text-center mb-4">{title}</h1>
+
+        <FrameEditor />
+      </div>
+    </div>
+  );
 }

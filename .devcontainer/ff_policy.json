@@ -1,0 +1,32 @@
+{
+  "policies": {
+    "UserMessaging": {
+      "SkipOnboarding": true
+    },
+    "Extensions": {
+      "Install": [
+        "https://addons.mozilla.org/firefox/downloads/file/4342782/ether_metamask-latest.xpi",
+        "https://addons.mozilla.org/firefox/downloads/file/4360002/react_devtools-latest.xpi"
+      ]
+    },
+    "ExtensionSettings": {
+      "webextension@metamask.io": {
+        "default_area": "navbar"
+      },
+      "@react-devtools": {
+        "default_area": "navbar"
+      }
+    },
+    "ExtensionUpdate": true,
+    "DisableTelemetry": true,
+    "DisableFirefoxStudies": true,
+    "EnableTrackingProtection": {
+      "Value": true,
+      "Locked": false,
+      "Cryptomining": true,
+      "Fingerprinting": true,
+      "EmailTracking": true,
+      "Exceptions": []
+    }
+  }
+}
