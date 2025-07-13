@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useMiniApp } from "@neynar/react";
 import { Button } from "~/components/ui/Button";
 import { ShareButton } from "~/components/ui/Share";
+import { APP_URL } from "~/lib/constants";
 
 interface Frame {
   id: string;
@@ -481,7 +482,7 @@ export default function FrameEditor() {
             buttonText="Share Frame"
             className="w-full"
             cast={{
-              text: `Just framed my profile with ${selectedFrame?.name}! 🖼️\nThe ticker is $ITH`,
+              text: `Just framed my profile with ${selectedFrame?.name}! 🖼️\nThe ticker is $ITH\n\n${APP_URL}`,
               embeds: [
                 {
                   imageUrl: async () => processedImageUrl,
