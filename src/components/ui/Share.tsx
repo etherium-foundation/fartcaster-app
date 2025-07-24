@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useState, useEffect } from 'react';
-import { Button } from './Button';
+import { Button } from "~/components/ui/button";
 import { useMiniApp } from '@neynar/react';
 import { type ComposeCast } from "@farcaster/frame-sdk";
+import { Spinner } from "~/components/ui/spinner";
 
 interface EmbedConfig {
   path?: string;
@@ -109,10 +110,9 @@ export function ShareButton({ buttonText, cast, className = '', isLoading = fals
     <Button
       onClick={handleShare}
       className={className}
-      isLoading={isLoading || isProcessing}
       disabled={isLoadingBestFriends}
     >
-      {buttonText}
+      {isLoading || isProcessing ? <Spinner /> : buttonText}
     </Button>
   );
 }
