@@ -28,9 +28,9 @@
     "dotenv": "^16.4.7",
     "lucide-react": "^0.469.0",
     "mipd": "^0.0.7",
-    "next": "^15",
-    "react": "^19",
-    "react-dom": "^19",
+    "next": "15.4.3",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "viem": "^2.23.6",
@@ -38,15 +38,17 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@wagmi/cli": "^2.3.2",
-    "eslint": "^8",
-    "eslint-config-next": "15.0.3",
     "pino-pretty": "^13.0.0",
     "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "@tailwindcss/postcss": "^4",
+    "tailwindcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "15.4.3",
+    "@eslint/eslintrc": "^3"
   }
 }

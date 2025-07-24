@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { MiniAppProvider } from "@neynar/react";
 
 const WagmiProvider = dynamic(
-  () => import("~/components/providers/WagmiProvider"),
+  () => import("@/components/providers/WagmiProvider"),
   {
     ssr: false,
   }

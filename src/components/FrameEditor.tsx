@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMiniApp } from "@neynar/react";
-import { Button } from "~/components/ui/button";
-import { ShareButton } from "~/components/ui/Share";
-import { APP_URL } from "~/lib/constants";
+import { Button } from "@/components/ui/button";
+import { ShareButton } from "@/components/ui/Share";
+import { APP_URL } from "@/lib/constants";
 
 interface Frame {
   id: string;

@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useCallback, useState, useEffect } from 'react';
-import { Button } from "~/components/ui/button";
-import { useMiniApp } from '@neynar/react';
+import { useCallback, useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { useMiniApp } from "@neynar/react";
 import { type ComposeCast } from "@farcaster/frame-sdk";
-import { Spinner } from "~/components/ui/spinner";
+import { Spinner } from "@/components/ui/spinner";
 
 interface EmbedConfig {
   path?: string;
