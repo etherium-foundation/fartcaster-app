@@ -55,9 +55,9 @@ export default function IthSwap() {
 
   const handleMaxAmount = () => {
     if (balance) {
-      // Leave some ETH for gas fees (0.001 ETH)
+      // TODO: Leave some ETH for gas fees (0.001 ETH)
       const maxAmount = balance.value;
-      if (maxAmount > 0n) {
+      if (maxAmount > BigInt(0)) {
         setAmount(formatEther(maxAmount));
       } else {
         setError("Insufficient ETH for gas fees");
