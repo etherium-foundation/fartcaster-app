@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useMiniApp } from "@neynar/react";
-import FrameEditor from "~/components/FrameEditor";
-import IthSwap from "~/components/IthSwap";
-import { APP_NAME } from "~/lib/constants";
+import FrameEditor from "@/components/FrameEditor";
+import IthSwap from "@/components/IthSwap";
+import { APP_NAME } from "@/lib/constants";
 
 export default function App(
   { title }: { title?: string } = { title: APP_NAME }

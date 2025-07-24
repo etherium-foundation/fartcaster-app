@@ -8,10 +8,10 @@ import {
   useConnect,
 } from "wagmi";
 import { parseEther, formatEther } from "viem";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
-import { useWriteIthDeposit } from "~/wagmi/generated";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useWriteIthDeposit } from "@/wagmi/generated";
 
 export default function IthSwap() {
   const { address, isConnected } = useAccount();
