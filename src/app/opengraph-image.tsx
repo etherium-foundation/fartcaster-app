@@ -10,13 +10,15 @@ export default async function Image() {
   return new ImageResponse(
     (
       <div tw="relative flex w-full h-full">
-        <img
-          src={imageUrl}
-          alt="Etherium"
-          width={DEFAULT_OG_SIZE.width}
-          height={DEFAULT_OG_SIZE.height}
-          tw="w-full h-full object-cover"
-        />
+        <div tw="absolute inset-0 flex">
+          <img
+            src={imageUrl}
+            alt="Etherium"
+            width={DEFAULT_OG_SIZE.width}
+            height={DEFAULT_OG_SIZE.height}
+            tw="w-full h-full object-cover"
+          />
+        </div>
       </div>
     ),
     {
