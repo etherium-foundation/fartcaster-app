@@ -48,7 +48,7 @@ export default function App(
                 : "text-gray-600 hover:text-gray-900"
             }`}
           >
-            ETH Swap
+            ITH Swap
           </button>
         </div>
 
