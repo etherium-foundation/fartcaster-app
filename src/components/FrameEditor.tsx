@@ -482,7 +482,7 @@ export default function FrameEditor() {
             buttonText="Share Frame"
             className="w-full"
             cast={{
-              text: `Just framed my profile with ${selectedFrame?.name}! 🖼️\nThe ticker is $ITH\n\n${APP_URL}`,
+              text: `Just framed my profile with the Etherium Mini App! 🖼️\nThe ticker is $ITH\n\n${APP_URL}`,
               embeds: [
                 {
                   imageUrl: async () => processedImageUrl,
