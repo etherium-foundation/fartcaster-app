@@ -5,7 +5,11 @@ export const APP_DESCRIPTION =
 export const APP_PRIMARY_CATEGORY = "social";
 export const APP_TAGS = ["ith", "etherium", "foundation", "vitamin", "vitalek"];
 export const APP_ICON_URL = `${APP_URL}/icon.png`;
-export const APP_OG_IMAGE_URL = `${APP_URL}/api/opengraph-image`;
+export const APP_OG_IMAGE_URL = `${APP_URL}/opengraph-image`;
 export const APP_SPLASH_URL = `${APP_URL}/splash.png`;
 export const APP_SPLASH_BACKGROUND_COLOR = "#f7f7f7";
 export const APP_BUTTON_TEXT = "Open for ITH!";
+export const DEFAULT_OG_SIZE = {
+  width: 1200,
+  height: 630,
+} as const;
