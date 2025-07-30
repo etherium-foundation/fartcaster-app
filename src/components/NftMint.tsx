@@ -13,7 +13,7 @@ import {
   useReadIthnftMintPrice,
   useReadIthnftTokenUri,
 } from "@/wagmi/generated";
-import { mainnet, baseSepolia } from "wagmi/chains";
+import { mainnet } from "wagmi/chains";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,7 +34,9 @@ import {
   Shield,
   CheckCircle,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
+import Image from "next/image";
 
 interface NFTMetadata {
   name: string;
@@ -54,19 +56,24 @@ export default function NftMint() {
 
   const [tokenId, setTokenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isUserRejection, setIsUserRejection] = useState(false);
   const [nftMetadata, setNftMetadata] = useState<NFTMetadata | null>(null);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const contractAddress = "0x5b21eA285ca04807c31686fD6BAF9a80a46bA692"; //TODO: update with mainnet address
-  const expectedChainId = baseSepolia.id; //TODO: update with mainnet chain id
+  const expectedChainId = mainnet.id;
 
-  // Ref for success message scrolling
   const successMessageRef = useRef<HTMLDivElement>(null);
 
-  const { data: mintPrice } = useReadIthnftMintPrice();
+  const { data: mintPrice, error: mintPriceError } = useReadIthnftMintPrice();
 
-  // Read token URI when tokenId is available
+  useEffect(() => {
+    if (mintPriceError) {
+      setError("Mint price not available. Please try again.");
+    }
+  }, [mintPriceError]);
+
   const { data: tokenUri } = useReadIthnftTokenUri({
     args: tokenId ? [BigInt(tokenId)] : undefined,
     query: {
@@ -74,7 +81,6 @@ export default function NftMint() {
     },
   });
 
-  // Write contract for minting
   const {
     writeContractAsync: safeMintNFT,
     data: hash,
@@ -90,7 +96,6 @@ export default function NftMint() {
     chainId: expectedChainId,
   });
 
-  // Function to decode base64 data
   const decodeBase64 = (data: string): string => {
     try {
       return atob(data);
@@ -208,6 +213,7 @@ export default function NftMint() {
 
     try {
       setError(null);
+      setIsUserRejection(false);
       setTokenId(null);
       setNftMetadata(null);
       setIsModalOpen(false);
@@ -239,13 +245,26 @@ export default function NftMint() {
   // Handle write errors
   useEffect(() => {
     if (writeError) {
-      setError(writeError.message || "Transaction failed");
+      const errorMessage = writeError.message || "Transaction failed";
+
+      // Check if this is a user rejection
+      if (
+        errorMessage.includes("User rejected the request") ||
+        errorMessage.includes("User rejected") ||
+        errorMessage.includes("rejected")
+      ) {
+        setIsUserRejection(true);
+        setError("You rejected the mint");
+      } else {
+        setIsUserRejection(false);
+        setError(errorMessage);
+      }
     }
   }, [writeError]);
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <div className="mx-auto max-w-md space-y-6 rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center space-y-4">
             <div className="relative">
@@ -281,6 +300,8 @@ export default function NftMint() {
                 onClick={() => {
                   if (connectors[0]) {
                     connect({ connector: connectors[0] });
+                  } else {
+                    setError("No wallet found. Please try again.");
                   }
                 }}
                 className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
@@ -298,7 +319,7 @@ export default function NftMint() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 p-2 rounded-lg border border-white/20 shadow-lg">
         <div className="max-w-2xl mx-auto space-y-8">
           {/* Header */}
           <div className="text-center space-y-4 pt-8">
@@ -332,10 +353,10 @@ export default function NftMint() {
                     <span className="text-sm font-medium text-green-700">
                       Price
                     </span>
+                    <span className="text-lg font-bold text-green-900">
+                      {formatEther(mintPrice)} ETH
+                    </span>
                   </div>
-                  <p className="text-lg font-bold text-green-900">
-                    {formatEther(mintPrice)} ETH
-                  </p>
                   <p className="text-xs text-green-600">One-time minting fee</p>
                 </div>
               )}
@@ -353,16 +374,28 @@ export default function NftMint() {
                   </div>
                   <p className="text-lg font-bold text-amber-900">
                     {chainId === mainnet.id
-                      ? "Ethereum Mainnet"
+                      ? "Etherium Mainnet"
                       : `Chain ID: ${chainId}`}
                   </p>
                   <Button
-                    onClick={() => switchChain({ chainId: expectedChainId })}
+                    onClick={async () => {
+                      console.log("Switching chain to:", expectedChainId);
+                      try {
+                        await switchChain({ chainId: expectedChainId });
+                        console.log("Switched chain to:", expectedChainId);
+                      } catch (error) {
+                        console.error("Failed to switch chain:", error);
+                        setError(
+                          "Failed to switch to Etherium Mainnet. Please try again."
+                        );
+                        setIsUserRejection(true);
+                      }
+                    }}
                     variant="outline"
                     size="sm"
                     className="mt-3 w-full bg-white/50 hover:bg-white/80 border-amber-300 text-amber-700 hover:text-amber-800"
                   >
-                    Switch to Base Sepolia
+                    Switch to Etherium Mainnet
                   </Button>
                 </div>
               )}
@@ -396,6 +429,22 @@ export default function NftMint() {
                     <p className="text-sm font-medium text-red-700 break-words whitespace-pre-wrap">
                       {error}
                     </p>
+                    {isUserRejection && (
+                      <div className="mt-3 flex items-center space-x-2">
+                        <Button
+                          onClick={() => {
+                            setError(null);
+                            setIsUserRejection(false);
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="bg-white/50 hover:bg-white/80 border-red-300 text-red-700 hover:text-red-800"
+                        >
+                          <RefreshCw className="w-4 h-4 mr-1" />
+                          Try Again
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -405,7 +454,10 @@ export default function NftMint() {
             <Button
               onClick={handleMint}
               disabled={
-                !contractAddress || isConfirming || !!error || !mintPrice
+                !contractAddress ||
+                isConfirming ||
+                (!isUserRejection && !!error) ||
+                !mintPrice
               }
               className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:opacity-50"
               size="lg"
@@ -491,10 +543,12 @@ export default function NftMint() {
             {/* Etherium Banner */}
             <div className="text-center">
               <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                <img
+                <Image
                   src="/etherium-banner.jpeg"
                   alt="Etherium"
                   className="w-full h-auto"
+                  width={650}
+                  height={288}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
               </div>
@@ -540,10 +594,12 @@ export default function NftMint() {
                   <div className="text-center">
                     <div className="relative inline-block">
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-blue-500 rounded-3xl blur-xl opacity-30"></div>
-                      <img
+                      <Image
                         src={nftMetadata.image}
                         alt={nftMetadata.name}
-                        className="relative w-full max-w-md mx-auto rounded-3xl "
+                        className="relative w-full max-w-md mx-auto rounded-3xl"
+                        width={500}
+                        height={500}
                         onError={(e) => {
                           console.error("Error loading NFT image");
                           e.currentTarget.style.display = "none";
