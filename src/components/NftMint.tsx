@@ -542,16 +542,24 @@ export default function NftMint() {
 
             {/* Etherium Banner */}
             <div className="text-center">
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                <Image
-                  src="/etherium-banner.jpeg"
-                  alt="Etherium"
-                  className="w-full h-auto"
-                  width={650}
-                  height={288}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-              </div>
+              <a
+                href="https://etherium.foundation/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block transition-transform hover:scale-105 group"
+                title="Visit the Etherium Foundation website"
+              >
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+                  <Image
+                    src="/etherium-banner.jpeg"
+                    alt="Etherium"
+                    className="w-full h-auto"
+                    width={650}
+                    height={288}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                </div>
+              </a>
             </div>
           </div>
         </div>
