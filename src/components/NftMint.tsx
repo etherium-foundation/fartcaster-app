@@ -198,8 +198,8 @@ export default function NftMint() {
   const nextWindow = currentMintingWindowNumber
     ? HARDCODED_WINDOWS.find(
         (window) => window.windowNumber === currentMintingWindowNumber + 1 - 1 // Zero indexed
-      )
-    : null;
+      ) || null // If no next window found (we're at the last window), return null
+    : HARDCODED_WINDOWS[0]; // If no current window, show the first available window
 
   // Update current time every second
   useEffect(() => {
