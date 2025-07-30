@@ -12,6 +12,8 @@ import {
   useWriteIthnftSafeMint,
   useReadIthnftMintPrice,
   useReadIthnftTokenUri,
+  useReadIthnftGetCurrentMintingWindow,
+  useReadIthnftWindows,
 } from "@/wagmi/generated";
 import { mainnet } from "wagmi/chains";
 import { Button } from "@/components/ui/button";
@@ -35,8 +37,11 @@ import {
   CheckCircle,
   AlertCircle,
   RefreshCw,
+  Clock,
+  Calendar,
 } from "lucide-react";
 import Image from "next/image";
+import { format, formatDistanceToNow, fromUnixTime } from "date-fns";
 
 interface NFTMetadata {
   name: string;
@@ -46,6 +51,12 @@ interface NFTMetadata {
     trait_type: string;
     value: string;
   }>;
+}
+
+interface MintingWindow {
+  start: number;
+  end: number;
+  windowNumber: number;
 }
 
 export default function NftMint() {
@@ -60,6 +71,9 @@ export default function NftMint() {
   const [nftMetadata, setNftMetadata] = useState<NFTMetadata | null>(null);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState<number>(
+    Math.floor(Date.now() / 1000)
+  );
 
   const contractAddress = "0x5b21eA285ca04807c31686fD6BAF9a80a46bA692"; //TODO: update with mainnet address
   const expectedChainId = mainnet.id;
@@ -67,6 +81,89 @@ export default function NftMint() {
   const successMessageRef = useRef<HTMLDivElement>(null);
 
   const { data: mintPrice, error: mintPriceError } = useReadIthnftMintPrice();
+
+  // Read current minting window from contract
+  const { data: currentMintingWindowNumber } =
+    useReadIthnftGetCurrentMintingWindow();
+
+  // Read current window details
+  const { data: currentWindowData } = useReadIthnftWindows({
+    args: currentMintingWindowNumber ? [currentMintingWindowNumber] : undefined,
+    query: {
+      enabled: !!currentMintingWindowNumber,
+    },
+  });
+
+  // Read next window details
+  const { data: nextWindowData } = useReadIthnftWindows({
+    args: currentMintingWindowNumber
+      ? [currentMintingWindowNumber + 1]
+      : undefined,
+    query: {
+      enabled: !!currentMintingWindowNumber,
+    },
+  });
+
+  // Update current time every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Math.floor(Date.now() / 1000));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Check if we're in a valid minting window using on-chain data
+  const getCurrentMintingWindow = (): MintingWindow | null => {
+    if (!currentWindowData) return null;
+
+    const [start, end, windowNumber] = currentWindowData;
+    return {
+      start: Number(start),
+      end: Number(end),
+      windowNumber: Number(windowNumber),
+    };
+  };
+
+  // Get the next minting window using on-chain data
+  const getNextMintingWindow = (): MintingWindow | null => {
+    if (!nextWindowData) return null;
+
+    const [start, end, windowNumber] = nextWindowData;
+    return {
+      start: Number(start),
+      end: Number(end),
+      windowNumber: Number(windowNumber),
+    };
+  };
+
+  // Format timestamp to readable date
+  const formatTimestamp = (timestamp: number): string => {
+    return format(fromUnixTime(timestamp), "PPP 'at' p");
+  };
+
+  // Calculate time until next window
+  const getTimeUntilNextWindow = (): string => {
+    const nextWindow = getNextMintingWindow();
+    if (!nextWindow) return "No future windows available";
+
+    const nextWindowDate = fromUnixTime(nextWindow.start);
+    return formatDistanceToNow(nextWindowDate, { addSuffix: true });
+  };
+
+  // Get year from timestamp
+  const getYearFromTimestamp = (timestamp: number): number => {
+    return fromUnixTime(timestamp).getFullYear();
+  };
+
+  const currentWindow = getCurrentMintingWindow();
+  const nextWindow = getNextMintingWindow();
+
+  // Check if we're in a valid minting window using on-chain data and current time
+  const isMintingAvailable =
+    currentWindow &&
+    currentTime >= currentWindow.start &&
+    currentTime <= currentWindow.end;
 
   useEffect(() => {
     if (mintPriceError) {
@@ -211,6 +308,14 @@ export default function NftMint() {
   const handleMint = async () => {
     if (!isConnected) return;
 
+    // Check if minting is available
+    if (!isMintingAvailable) {
+      setError(
+        "Minting is currently closed. Please return during the next minting window."
+      );
+      return;
+    }
+
     try {
       setError(null);
       setIsUserRejection(false);
@@ -341,6 +446,66 @@ export default function NftMint() {
 
           {/* Main Card */}
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-3 shadow-2xl border border-white/20 space-y-8">
+            {/* Minting Window Status */}
+            {isMintingAvailable ? (
+              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 border border-green-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="flex items-center space-x-3 mb-3">
+                  <div className="bg-green-500 rounded-full p-2">
+                    <Calendar className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-green-700">
+                    Minting Window Active
+                  </span>
+                </div>
+                <p className="text-lg font-bold text-green-900">
+                  Window #{currentWindow?.windowNumber} (
+                  {getYearFromTimestamp(currentWindow?.start || 0)})
+                </p>
+                <p className="text-xs text-green-600">
+                  Ends: {formatTimestamp(currentWindow?.end || 0)}
+                </p>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-6 border border-amber-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="flex items-center space-x-3 mb-3">
+                  <div className="bg-amber-500 rounded-full p-2">
+                    <Clock className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-amber-700">
+                    Minting Closed
+                  </span>
+                </div>
+                <p className="text-lg font-bold text-amber-900">
+                  Next Window: #{nextWindow?.windowNumber} (
+                  {getYearFromTimestamp(nextWindow?.start || 0)})
+                </p>
+                <p className="text-xs text-amber-600">
+                  Opens in: {getTimeUntilNextWindow()}
+                </p>
+                <p className="text-xs text-amber-600 mt-1">
+                  Opens: {formatTimestamp(nextWindow?.start || 0)}
+                </p>
+
+                {/* Share Button with Humorous Message */}
+                <div className="mt-4 pt-4 border-t border-amber-200">
+                  <ShareButton
+                    buttonText="Share My FOMO 😅"
+                    cast={{
+                      text: `Oops! I missed the NFT minting window again! 😅 Now I have to wait until ${formatTimestamp(
+                        nextWindow?.start || 0
+                      )} for the next chance. The struggle is real! 🫠`,
+                      embeds: [
+                        {
+                          url: "https://farcaster.xyz/miniapps/JJD7MR8eWb4u/etherium-app",
+                        },
+                      ],
+                    }}
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-white border-amber-600 hover:border-amber-700 transition-colors duration-200"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Info Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Minting Price */}
@@ -415,7 +580,11 @@ export default function NftMint() {
                   className="flex h-12 w-full rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3 text-sm font-mono ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  {isMintingAvailable ? (
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  ) : (
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  )}
                 </div>
               </div>
             </div>
@@ -457,7 +626,8 @@ export default function NftMint() {
                 !contractAddress ||
                 isConfirming ||
                 (!isUserRejection && !!error) ||
-                !mintPrice
+                !mintPrice ||
+                !isMintingAvailable
               }
               className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:opacity-50"
               size="lg"
@@ -467,6 +637,11 @@ export default function NftMint() {
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                   Minting...
                 </>
+              ) : !isMintingAvailable ? (
+                <>
+                  <Clock className="w-5 h-5 mr-2" />
+                  Minting Closed
+                </>
               ) : (
                 <>
                   <Sparkles className="w-5 h-5 mr-2" />
@@ -474,6 +649,27 @@ export default function NftMint() {
                 </>
               )}
             </Button>
+
+            {/* Minting Unavailable Message */}
+            {/* {!isMintingAvailable && (
+              <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-2xl p-4">
+                <div className="flex items-start space-x-3">
+                  <Clock className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-amber-700">
+                      Minting is currently closed. Please return during the next
+                      minting window.
+                    </p>
+                    {nextWindow && (
+                      <p className="text-xs text-amber-600 mt-2">
+                        Next window opens in {getTimeUntilNextWindow()} on{" "}
+                        {formatTimestamp(nextWindow.start)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )} */}
 
             {/* Success Message */}
             {isSuccess && (
@@ -521,7 +717,7 @@ export default function NftMint() {
                         buttonText="Share NFT on Farcaster"
                         className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
                         cast={{
-                          text: `Happy Birthday Etherium!!!\n\nI minted my commemorative NFT on the Etherium Mini App! 🎨\n\nGet yours from the Etherium Mini App!\n\nThe ticker is $ITH!`,
+                          text: `Happy Birthday Etherium!!!\n\nI minted my commemorative NFT on the Etherium Mini App! 🎨\n\nGet yours from the Etherium Mini App!\n\nThe ticker is $ITH!\n\nPS: The next minting window is on July 30, 2035! Hurry up and get yours before it's too late!!!`,
                           embeds: [
                             {
                               imageUrl: async () => nftMetadata.image,
@@ -636,7 +832,7 @@ export default function NftMint() {
                       buttonText="Share NFT on Farcaster"
                       className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-4 px-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                       cast={{
-                        text: `Happy Birthday Etherium!!!\n\nI minted my commemorative NFT on the Etherium Mini App! 🎨\n\nGet yours from the Etherium Mini App!\n\nThe ticker is $ITH!`,
+                        text: `Happy Birthday Etherium!!!\n\nI minted my commemorative NFT on the Etherium Mini App! 🎨\n\nGet yours from the Etherium Mini App!\n\nThe ticker is $ITH!\n\nPS: The next minting window is on July 30, 2035! Hurry up and get yours before it's too late!!!`,
                         embeds: [
                           {
                             imageUrl: async () => nftMetadata.image,
