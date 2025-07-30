@@ -539,7 +539,7 @@ export const ithnftAbi = [
 ] as const;
 
 export const ithnftAddress =
-  "0x5b21eA285ca04807c31686fD6BAF9a80a46bA692" as const;
+  "0xe63CACD1337Bf20fF1A73cC73a3645667EEd6573" as const;
 
 export const ithnftConfig = { address: ithnftAddress, abi: ithnftAbi } as const;
 

@@ -15,7 +15,7 @@ export default defineConfig({
     {
       name: "ITHNFT",
       abi: ithNftAbi,
-      address: "0x5b21eA285ca04807c31686fD6BAF9a80a46bA692", //TODO: update with mainnet address
+      address: "0xe63CACD1337Bf20fF1A73cC73a3645667EEd6573",
     },
   ],
   plugins: [react()],
