@@ -829,14 +829,18 @@ export default function NftMint() {
                   <div className="text-center">
                     <div className="relative inline-block">
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-blue-500 rounded-3xl blur-xl opacity-30"></div>
-                      <Image
+                      <img
                         src={nftMetadata.image}
                         alt={nftMetadata.name}
-                        className="relative w-full max-w-md mx-auto rounded-3xl"
+                        className="relative w-full max-w-md mx-auto rounded-3xl object-contain"
                         width={500}
                         height={500}
+                        style={{ minHeight: "300px" }}
+                        onLoad={() => {
+                          console.log("NFT image loaded successfully");
+                        }}
                         onError={(e) => {
-                          console.error("Error loading NFT image");
+                          console.error("Error loading NFT image:", e);
                           e.currentTarget.style.display = "none";
                         }}
                       />
