@@ -4,13 +4,16 @@ import { useState } from "react";
 import { useMiniApp } from "@neynar/react";
 import FrameEditor from "@/components/FrameEditor";
 import IthSwap from "@/components/IthSwap";
+import NftMint from "@/components/NftMint";
 import { APP_NAME } from "@/lib/constants";
 
 export default function App(
   { title }: { title?: string } = { title: APP_NAME }
 ) {
   const { isSDKLoaded, context } = useMiniApp();
-  const [activeTab, setActiveTab] = useState<"frames" | "swap">("frames");
+  const [activeTab, setActiveTab] = useState<"frames" | "swap" | "nft">(
+    "nft"
+  );
 
   if (!isSDKLoaded) {
     return <div>Loading...</div>;
@@ -50,11 +53,22 @@ export default function App(
           >
             ITH Swap
           </button>
+          <button
+            onClick={() => setActiveTab("nft")}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === "nft"
+                ? "bg-white text-purple-600 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            NFT Mint
+          </button>
         </div>
 
         {/* Tab Content */}
         {activeTab === "frames" && <FrameEditor />}
         {activeTab === "swap" && <IthSwap />}
+        {activeTab === "nft" && <NftMint />}
       </div>
     </div>
   );
