@@ -13,7 +13,6 @@ import {
   useReadIthnftMintPrice,
   useReadIthnftTokenUri,
   useReadIthnftGetCurrentMintingWindow,
-  useReadIthnftWindows,
   ithnftAddress,
 } from "@/wagmi/generated";
 import { mainnet } from "wagmi/chains";
@@ -39,9 +38,7 @@ import {
   AlertCircle,
   RefreshCw,
   Clock,
-  Calendar,
   Heart,
-  DollarSign,
 } from "lucide-react";
 import Image from "next/image";
 import { format, formatDistanceToNow, fromUnixTime } from "date-fns";
@@ -524,7 +521,7 @@ export default function NftMint() {
                   {getYearFromTimestamp(nextWindow?.start || 0)})
                 </p>
                 <p className="text-xs text-amber-600">
-                  Opens {getTimeUntilNextWindow()}
+                  Opens: {getTimeUntilNextWindow()}
                 </p>
                 <p className="text-xs text-amber-600 mt-1">
                   Opens: {formatTimestamp(nextWindow?.start || 0)}
