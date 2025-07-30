@@ -28,7 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ShareButton } from "@/components/ui/Share";
-import { formatEther } from "viem";
+import { formatEther, parseEther } from "viem";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import {
   Sparkles,
@@ -40,6 +40,8 @@ import {
   RefreshCw,
   Clock,
   Calendar,
+  Heart,
+  DollarSign,
 } from "lucide-react";
 import Image from "next/image";
 import { format, formatDistanceToNow, fromUnixTime } from "date-fns";
@@ -60,6 +62,20 @@ interface MintingWindow {
   windowNumber: number;
 }
 
+// Hardcoded minting windows
+const HARDCODED_WINDOWS: MintingWindow[] = [
+  { start: 1753889173, end: 1753975573, windowNumber: 1 }, // 2025
+  { start: 2069421973, end: 2069508373, windowNumber: 2 }, // 2035
+  { start: 2385041173, end: 2385127573, windowNumber: 3 }, // 2045
+  { start: 2700573973, end: 2700660373, windowNumber: 4 }, // 2055
+  { start: 3016193173, end: 3016279573, windowNumber: 5 }, // 2065
+  { start: 3331725973, end: 3331812373, windowNumber: 6 }, // 2075
+  { start: 3647345173, end: 3647431573, windowNumber: 7 }, // 2085
+  { start: 3962877973, end: 3962964373, windowNumber: 8 }, // 2095
+  { start: 4278410773, end: 4278497173, windowNumber: 9 }, // 2105
+  { start: 4593943573, end: 4594029973, windowNumber: 10 }, // 2115
+];
+
 export default function NftMint() {
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
@@ -75,6 +91,14 @@ export default function NftMint() {
   const [currentTime, setCurrentTime] = useState<number>(
     Math.floor(Date.now() / 1000)
   );
+
+  const [isTippingModalOpen, setIsTippingModalOpen] = useState(false);
+  const [selectedTipPercentage, setSelectedTipPercentage] = useState<
+    number | null
+  >(null);
+  const [customTipAmount, setCustomTipAmount] = useState<string>("");
+  const [tipAmount, setTipAmount] = useState<bigint>(BigInt(0));
+
   const contractAddress = ithnftAddress;
   const expectedChainId = mainnet.id;
 
@@ -82,27 +106,103 @@ export default function NftMint() {
 
   const { data: mintPrice, error: mintPriceError } = useReadIthnftMintPrice();
 
+  // Calculate tip amounts based on mint price
+  const calculateTipAmount = (percentage: number): bigint => {
+    if (!mintPrice) return BigInt(0);
+    return (mintPrice * BigInt(percentage)) / BigInt(100);
+  };
+
+  const tipOptions = [
+    { percentage: 15, amount: calculateTipAmount(15) },
+    { percentage: 20, amount: calculateTipAmount(20) },
+    { percentage: 25, amount: calculateTipAmount(25) },
+  ];
+
+  const totalAmount = mintPrice ? mintPrice + tipAmount : BigInt(0);
+
+  const handleTipSelection = (percentage: number | null, amount?: bigint) => {
+    if (percentage === null) {
+      setSelectedTipPercentage(null);
+      setTipAmount(BigInt(0));
+      setCustomTipAmount("");
+    } else if (amount) {
+      setSelectedTipPercentage(percentage);
+      setTipAmount(amount);
+      setCustomTipAmount("");
+    }
+  };
+
+  const handleCustomTipClick = () => {
+    setSelectedTipPercentage(-1); // Use -1 to indicate custom tip
+    setCustomTipAmount("");
+    setTipAmount(BigInt(0));
+  };
+
+  const handleCustomTipChange = (value: string) => {
+    setCustomTipAmount(value);
+    setSelectedTipPercentage(-1);
+
+    try {
+      if (value && !isNaN(parseFloat(value))) {
+        const customAmount = parseEther(value);
+        setTipAmount(customAmount);
+      } else {
+        setTipAmount(BigInt(0));
+      }
+    } catch (error) {
+      setTipAmount(BigInt(0));
+    }
+  };
+
+  const handleTipConfirm = async () => {
+    setIsTippingModalOpen(false);
+    await executeMint();
+  };
+
+  const handleTipCancel = () => {
+    setIsTippingModalOpen(false);
+    setSelectedTipPercentage(null);
+    setCustomTipAmount("");
+    setTipAmount(BigInt(0));
+  };
+
+  const executeMint = async () => {
+    if (!isConnected || !mintPrice) return;
+
+    try {
+      setError(null);
+      setIsUserRejection(false);
+      setTokenId(null);
+      setNftMetadata(null);
+      setIsModalOpen(false);
+
+      // Execute the mint transaction with tip included
+      await safeMintNFT({
+        args: [address as `0x${string}`],
+        value: totalAmount,
+      });
+    } catch (error) {
+      console.error("Mint failed:", error);
+      setError("Transaction failed. Please try again.");
+    }
+  };
+
   // Read current minting window from contract
   const { data: currentMintingWindowNumber } =
     useReadIthnftGetCurrentMintingWindow();
 
-  // Read current window details
-  const { data: currentWindowData } = useReadIthnftWindows({
-    args: currentMintingWindowNumber ? [currentMintingWindowNumber] : undefined,
-    query: {
-      enabled: !!currentMintingWindowNumber,
-    },
-  });
+  const currentWindow = currentMintingWindowNumber
+    ? HARDCODED_WINDOWS.find(
+        (window) => window.windowNumber === currentMintingWindowNumber
+      )
+    : null;
 
-  // Read next window details
-  const { data: nextWindowData } = useReadIthnftWindows({
-    args: currentMintingWindowNumber
-      ? [currentMintingWindowNumber + 1]
-      : undefined,
-    query: {
-      enabled: !!currentMintingWindowNumber,
-    },
-  });
+  // Get next window from hardcoded windows
+  const nextWindow = currentMintingWindowNumber
+    ? HARDCODED_WINDOWS.find(
+        (window) => window.windowNumber === currentMintingWindowNumber + 1 - 1 // Zero indexed
+      )
+    : null;
 
   // Update current time every second
   useEffect(() => {
@@ -113,30 +213,6 @@ export default function NftMint() {
     return () => clearInterval(interval);
   }, []);
 
-  // Check if we're in a valid minting window using on-chain data
-  const getCurrentMintingWindow = (): MintingWindow | null => {
-    if (!currentWindowData) return null;
-
-    const [start, end, windowNumber] = currentWindowData;
-    return {
-      start: Number(start),
-      end: Number(end),
-      windowNumber: Number(windowNumber),
-    };
-  };
-
-  // Get the next minting window using on-chain data
-  const getNextMintingWindow = (): MintingWindow | null => {
-    if (!nextWindowData) return null;
-
-    const [start, end, windowNumber] = nextWindowData;
-    return {
-      start: Number(start),
-      end: Number(end),
-      windowNumber: Number(windowNumber),
-    };
-  };
-
   // Format timestamp to readable date
   const formatTimestamp = (timestamp: number): string => {
     return format(fromUnixTime(timestamp), "PPP 'at' p");
@@ -144,7 +220,6 @@ export default function NftMint() {
 
   // Calculate time until next window
   const getTimeUntilNextWindow = (): string => {
-    const nextWindow = getNextMintingWindow();
     if (!nextWindow) return "No future windows available";
 
     const nextWindowDate = fromUnixTime(nextWindow.start);
@@ -156,11 +231,12 @@ export default function NftMint() {
     return fromUnixTime(timestamp).getFullYear();
   };
 
-  const currentWindow = getCurrentMintingWindow();
-  const nextWindow = getNextMintingWindow();
-
-  // Check if we're in a valid minting window using on-chain data and current time
+  // Check if minting is available based on currentMintingWindowNumber
+  // If currentMintingWindowNumber = 0, minting is closed
+  // If currentMintingWindowNumber > 0, it's the active current window
   const isMintingAvailable =
+    currentMintingWindowNumber !== undefined &&
+    currentMintingWindowNumber > 0 &&
     currentWindow &&
     currentTime >= currentWindow.start &&
     currentTime <= currentWindow.end;
@@ -316,28 +392,14 @@ export default function NftMint() {
       return;
     }
 
-    try {
-      setError(null);
-      setIsUserRejection(false);
-      setTokenId(null);
-      setNftMetadata(null);
-      setIsModalOpen(false);
-
-      // Check if mint price is available
-      if (!mintPrice) {
-        setError("Mint price not available. Please try again.");
-        return;
-      }
-
-      // Execute the actual mint transaction
-      await safeMintNFT({
-        args: [address as `0x${string}`],
-        value: mintPrice,
-      });
-    } catch (error) {
-      console.error("Mint failed:", error);
-      setError("Transaction failed. Please try again.");
+    // Check if mint price is available
+    if (!mintPrice) {
+      setError("Mint price not available. Please try again.");
+      return;
     }
+
+    // Open tipping modal instead of directly minting
+    setIsTippingModalOpen(true);
   };
 
   // Clear error when transaction succeeds
@@ -447,25 +509,7 @@ export default function NftMint() {
           {/* Main Card */}
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-3 shadow-2xl border border-white/20 space-y-8">
             {/* Minting Window Status */}
-            {isMintingAvailable ? (
-              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 border border-green-200 shadow-lg hover:shadow-xl transition-all duration-300">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="bg-green-500 rounded-full p-2">
-                    <Calendar className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-sm font-medium text-green-700">
-                    Minting Window Active
-                  </span>
-                </div>
-                <p className="text-lg font-bold text-green-900">
-                  Window #{currentWindow?.windowNumber} (
-                  {getYearFromTimestamp(currentWindow?.start || 0)})
-                </p>
-                <p className="text-xs text-green-600">
-                  Ends: {formatTimestamp(currentWindow?.end || 0)}
-                </p>
-              </div>
-            ) : (
+            {!isMintingAvailable && (
               <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-6 border border-amber-200 shadow-lg hover:shadow-xl transition-all duration-300">
                 <div className="flex items-center space-x-3 mb-3">
                   <div className="bg-amber-500 rounded-full p-2">
@@ -480,7 +524,7 @@ export default function NftMint() {
                   {getYearFromTimestamp(nextWindow?.start || 0)})
                 </p>
                 <p className="text-xs text-amber-600">
-                  Opens in: {getTimeUntilNextWindow()}
+                  Opens {getTimeUntilNextWindow()}
                 </p>
                 <p className="text-xs text-amber-600 mt-1">
                   Opens: {formatTimestamp(nextWindow?.start || 0)}
@@ -650,27 +694,6 @@ export default function NftMint() {
               )}
             </Button>
 
-            {/* Minting Unavailable Message */}
-            {/* {!isMintingAvailable && (
-              <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-2xl p-4">
-                <div className="flex items-start space-x-3">
-                  <Clock className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-amber-700">
-                      Minting is currently closed. Please return during the next
-                      minting window.
-                    </p>
-                    {nextWindow && (
-                      <p className="text-xs text-amber-600 mt-2">
-                        Next window opens in {getTimeUntilNextWindow()} on{" "}
-                        {formatTimestamp(nextWindow.start)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )} */}
-
             {/* Success Message */}
             {isSuccess && (
               <div
@@ -688,6 +711,11 @@ export default function NftMint() {
                   {tokenId && (
                     <p className="text-sm text-green-600">
                       Token ID: {tokenId}
+                    </p>
+                  )}
+                  {tipAmount > BigInt(0) && (
+                    <p className="text-sm text-green-600">
+                      Tip: {formatEther(tipAmount)} ETH
                     </p>
                   )}
 
@@ -717,7 +745,13 @@ export default function NftMint() {
                         buttonText="Share NFT on Farcaster"
                         className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
                         cast={{
-                          text: `Happy Birthday Etherium!!!\n\nI minted my commemorative NFT on the Etherium Mini App! 🎨\n\nGet yours from the Etherium Mini App!\n\nThe ticker is $ITH!\n\nPS: The next minting window is on July 30, 2035! Hurry up and get yours before it's too late!!!`,
+                          text: `Happy Birthday Etherium!!!\n\nI minted my commemorative NFT on the Etherium Mini App! 🎨${
+                            tipAmount > BigInt(0)
+                              ? `\n\nI also left a ${formatEther(
+                                  tipAmount
+                                )} ETH tip to support the creators! 💝`
+                              : ""
+                          }\n\nGet yours from the Etherium Mini App!\n\nThe ticker is $ITH!\n\nPS: The next minting window is on July 30, 2035! Hurry up and get yours before it's too late!!!`,
                           embeds: [
                             {
                               imageUrl: async () => nftMetadata.image,
@@ -832,7 +866,13 @@ export default function NftMint() {
                       buttonText="Share NFT on Farcaster"
                       className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-4 px-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                       cast={{
-                        text: `Happy Birthday Etherium!!!\n\nI minted my commemorative NFT on the Etherium Mini App! 🎨\n\nGet yours from the Etherium Mini App!\n\nThe ticker is $ITH!\n\nPS: The next minting window is on July 30, 2035! Hurry up and get yours before it's too late!!!`,
+                        text: `Happy Birthday Etherium!!!\n\nI minted my commemorative NFT on the Etherium Mini App! 🎨${
+                          tipAmount > BigInt(0)
+                            ? `\n\nI also left a ${formatEther(
+                                tipAmount
+                              )} ETH tip to support the creators! 💝`
+                            : ""
+                        }\n\nGet yours from the Etherium Mini App!\n\nThe ticker is $ITH!\n\nPS: The next minting window is on July 30, 2035! Hurry up and get yours before it's too late!!!`,
                         embeds: [
                           {
                             imageUrl: async () => nftMetadata.image,
@@ -861,6 +901,129 @@ export default function NftMint() {
                 </p>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tipping Modal */}
+      <Dialog open={isTippingModalOpen} onOpenChange={setIsTippingModalOpen}>
+        <DialogContent className="max-w-md max-h-[95vh] overflow-y-auto bg-gradient-to-br from-white to-purple-50/30 backdrop-blur-sm border-0 shadow-2xl rounded-3xl">
+          <DialogHeader className="text-center space-y-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-blue-500 rounded-full blur-xl opacity-20"></div>
+              <div className="relative bg-gradient-to-r from-purple-600 to-blue-600 rounded-full p-4 w-16 h-16 mx-auto flex items-center justify-center shadow-lg">
+                <Heart className="w-8 h-8 text-white" />
+              </div>
+            </div>
+            <DialogTitle className="text-2xl font-bold text-purple-700">
+              Add a tip?
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 text-base">
+              Show your appreciation for the Etherium Foundation!
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Percentage Tip Options */}
+            <div className="grid grid-cols-3 gap-3">
+              {tipOptions.map((option) => (
+                <Button
+                  key={option.percentage}
+                  onClick={() =>
+                    handleTipSelection(option.percentage, option.amount)
+                  }
+                  className={`flex flex-col items-center justify-center py-6 px-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 ${
+                    selectedTipPercentage === option.percentage
+                      ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-xl ring-2 ring-blue-300"
+                      : "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+                  }`}
+                >
+                  <span className="text-lg font-bold">
+                    {option.percentage}%
+                  </span>
+                </Button>
+              ))}
+            </div>
+
+            {/* Custom Tip Input */}
+            <div className="space-y-3">
+              <Button
+                onClick={handleCustomTipClick}
+                className={`w-full flex items-center justify-center py-4 px-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 ${
+                  selectedTipPercentage === -1
+                    ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-xl ring-2 ring-blue-300"
+                    : "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+                }`}
+              >
+                <span className="text-lg font-bold">Custom</span>
+              </Button>
+
+              {selectedTipPercentage === -1 && (
+                <Input
+                  type="text"
+                  placeholder="Enter custom amount (e.g., 0.01)"
+                  value={customTipAmount}
+                  onChange={(e) => handleCustomTipChange(e.target.value)}
+                  className="flex h-12 w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm font-mono ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm"
+                />
+              )}
+            </div>
+
+            {/* No Tip Option */}
+            <Button
+              onClick={() => handleTipSelection(null)}
+              className={`w-full flex items-center justify-center py-4 px-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 ${
+                selectedTipPercentage === null
+                  ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-xl ring-2 ring-blue-300"
+                  : "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+              }`}
+            >
+              <span className="text-lg font-bold">No tip</span>
+            </Button>
+
+            {/* Total Amount Display */}
+            <div className="text-center space-y-3 p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl border border-gray-200 shadow-sm">
+              <p className="text-sm font-medium text-gray-600">Total Amount</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {formatEther(totalAmount)} ETH
+              </p>
+              <p className="text-xs text-gray-500">
+                Mint Price: {formatEther(mintPrice || BigInt(0))} ETH
+                {tipAmount > BigInt(0) && (
+                  <span className="ml-2">
+                    + Tip: {formatEther(tipAmount)} ETH
+                  </span>
+                )}
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-3">
+              <Button
+                onClick={handleTipCancel}
+                variant="outline"
+                className="flex-1 border-gray-300 text-gray-700 hover:text-gray-800 hover:border-gray-400 bg-white rounded-xl shadow-sm transition-all duration-200"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleTipConfirm}
+                disabled={!isConnected || !mintPrice || isConfirming}
+                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:opacity-50"
+              >
+                {isConfirming ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Minting...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Mint NFT
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
