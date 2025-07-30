@@ -357,13 +357,6 @@ export const ithnftAbi = [
   {
     type: "function",
     inputs: [],
-    name: "getBalance",
-    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    inputs: [],
     name: "getCurrentMintingWindow",
     outputs: [{ name: "", internalType: "uint8", type: "uint8" }],
     stateMutability: "view",
@@ -804,15 +797,6 @@ export const useReadIthnftGetApproved = /*#__PURE__*/ createUseReadContract({
   abi: ithnftAbi,
   address: ithnftAddress,
   functionName: "getApproved",
-});
-
-/**
- * Wraps __{@link useReadContract}__ with `abi` set to __{@link ithnftAbi}__ and `functionName` set to `"getBalance"`
- */
-export const useReadIthnftGetBalance = /*#__PURE__*/ createUseReadContract({
-  abi: ithnftAbi,
-  address: ithnftAddress,
-  functionName: "getBalance",
 });
 
 /**

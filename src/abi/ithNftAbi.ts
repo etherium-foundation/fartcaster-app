@@ -183,13 +183,6 @@ export const ithNftAbi = [
   },
   {
     inputs: [],
-    name: "getBalance",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
     name: "getCurrentMintingWindow",
     outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
     stateMutability: "view",
