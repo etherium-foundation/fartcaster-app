@@ -10,9 +10,11 @@ interface EmbedConfig {
   path?: string;
   url?: string;
   imageUrl?: () => Promise<string>;
+  tokenId?: string;
+  contractAddress?: string;
 }
 
-interface CastConfig extends Omit<ComposeCast.Options, 'embeds'> {
+interface CastConfig extends Omit<ComposeCast.Options, "embeds"> {
   bestFriends?: boolean;
   embeds?: (string | EmbedConfig)[];
 }
@@ -24,9 +26,16 @@ interface ShareButtonProps {
   isLoading?: boolean;
 }
 
-export function ShareButton({ buttonText, cast, className = '', isLoading = false }: ShareButtonProps) {
+export function ShareButton({
+  buttonText,
+  cast,
+  className = "",
+  isLoading = false,
+}: ShareButtonProps) {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [bestFriends, setBestFriends] = useState<{ fid: number; username: string; }[] | null>(null);
+  const [bestFriends, setBestFriends] = useState<
+    { fid: number; username: string }[] | null
+  >(null);
   const [isLoadingBestFriends, setIsLoadingBestFriends] = useState(false);
   const { context, actions } = useMiniApp();
 
@@ -35,9 +44,9 @@ export function ShareButton({ buttonText, cast, className = '', isLoading = fals
     if (cast.bestFriends && context?.user?.fid) {
       setIsLoadingBestFriends(true);
       fetch(`/api/best-friends?fid=${context.user.fid}`)
-        .then(res => res.json())
-        .then(data => setBestFriends(data.bestFriends))
-        .catch(err => console.error('Failed to fetch best friends:', err))
+        .then((res) => res.json())
+        .then((data) => setBestFriends(data.bestFriends))
+        .catch((err) => console.error("Failed to fetch best friends:", err))
         .finally(() => setIsLoadingBestFriends(false));
     }
   }, [cast.bestFriends, context?.user?.fid]);
@@ -46,7 +55,7 @@ export function ShareButton({ buttonText, cast, className = '', isLoading = fals
     try {
       setIsProcessing(true);
 
-      let finalText = cast.text || '';
+      let finalText = cast.text || "";
 
       // Process best friends if enabled and data is loaded
       if (cast.bestFriends) {
@@ -58,36 +67,70 @@ export function ShareButton({ buttonText, cast, className = '', isLoading = fals
             if (friend) {
               return `@${friend.username}`;
             }
-            return ''; // Remove @N if no matching friend
+            return ""; // Remove @N if no matching friend
           });
         } else {
           // If bestFriends is not loaded but bestFriends is enabled, remove @N patterns
-          finalText = finalText.replace(/@\d+/g, '');
+          finalText = finalText.replace(/@\d+/g, "");
         }
       }
 
       // Process embeds
       const processedEmbeds = await Promise.all(
         (cast.embeds || []).map(async (embed) => {
-          if (typeof embed === 'string') {
+          if (typeof embed === "string") {
             return embed;
           }
           if (embed.path) {
-            const baseUrl = process.env.NEXT_PUBLIC_URL || window.location.origin;
+            const baseUrl =
+              process.env.NEXT_PUBLIC_URL || window.location.origin;
             const url = new URL(`${baseUrl}${embed.path}`);
 
             // Add UTM parameters
-            url.searchParams.set('utm_source', `share-cast-${context?.user?.fid || 'unknown'}`);
+            url.searchParams.set(
+              "utm_source",
+              `share-cast-${context?.user?.fid || "unknown"}`
+            );
 
             // If custom image generator is provided, use it
             if (embed.imageUrl) {
               const imageUrl = await embed.imageUrl();
-              url.searchParams.set('share_image_url', imageUrl);
+              url.searchParams.set("share_image_url", imageUrl);
             }
 
             return url.toString();
           }
-          return embed.url || '';
+          // Handle direct imageUrl function
+          if (embed.imageUrl) {
+            const imageUrl = await embed.imageUrl();
+
+            // If it's a data URL, we need to upload it first
+            if (imageUrl.startsWith("data:image/")) {
+              const baseUrl =
+                process.env.NEXT_PUBLIC_URL || window.location.origin;
+
+              // Upload the image data
+              const uploadResponse = await fetch(`${baseUrl}/api/nft-image`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  image: imageUrl,
+                  tokenId: embed.tokenId,
+                  contractAddress: embed.contractAddress,
+                }),
+              });
+
+              if (uploadResponse.ok) {
+                const { cacheKey } = await uploadResponse.json();
+                return `${baseUrl}/api/nft-image?key=${cacheKey}`;
+              }
+            }
+
+            return imageUrl;
+          }
+          return embed.url || "";
         })
       );
 
@@ -100,7 +143,7 @@ export function ShareButton({ buttonText, cast, className = '', isLoading = fals
         close: cast.close,
       });
     } catch (error) {
-      console.error('Failed to share:', error);
+      console.error("Failed to share:", error);
     } finally {
       setIsProcessing(false);
     }
