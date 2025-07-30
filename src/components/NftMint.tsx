@@ -14,6 +14,7 @@ import {
   useReadIthnftTokenUri,
   useReadIthnftGetCurrentMintingWindow,
   useReadIthnftWindows,
+  ithnftAddress,
 } from "@/wagmi/generated";
 import { mainnet } from "wagmi/chains";
 import { Button } from "@/components/ui/button";
@@ -74,8 +75,7 @@ export default function NftMint() {
   const [currentTime, setCurrentTime] = useState<number>(
     Math.floor(Date.now() / 1000)
   );
-
-  const contractAddress = "0x5b21eA285ca04807c31686fD6BAF9a80a46bA692"; //TODO: update with mainnet address
+  const contractAddress = ithnftAddress;
   const expectedChainId = mainnet.id;
 
   const successMessageRef = useRef<HTMLDivElement>(null);
