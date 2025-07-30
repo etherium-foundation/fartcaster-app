@@ -244,12 +244,33 @@ export default function NftMint() {
     }
   }, [mintPriceError]);
 
-  const { data: tokenUri } = useReadIthnftTokenUri({
+  const {
+    data: tokenUri,
+    isLoading: isLoadingTokenUri,
+    error: tokenUriError,
+    refetch: refetchTokenUri,
+  } = useReadIthnftTokenUri({
     args: tokenId ? [BigInt(tokenId)] : undefined,
     query: {
       enabled: !!tokenId,
+      retry: 3,
+      retryDelay: 2000, // 2 second delay between retries
     },
   });
+
+  // Debug token URI loading for Mainnet issues
+  useEffect(() => {
+    if (tokenId) {
+      console.log("Token URI state:", {
+        tokenUri,
+        isLoadingTokenUri,
+        tokenUriError,
+        tokenId,
+        chainId: expectedChainId,
+        isMainnet: expectedChainId === 1,
+      });
+    }
+  }, [tokenUri, isLoadingTokenUri, tokenUriError, tokenId, expectedChainId]);
 
   const {
     writeContractAsync: safeMintNFT,
@@ -357,9 +378,15 @@ export default function NftMint() {
   // Fetch metadata when token URI is available
   useEffect(() => {
     if (tokenUri && tokenId) {
+      console.log(
+        "Fetching metadata for token:",
+        tokenId,
+        "on chain:",
+        expectedChainId
+      );
       fetchNFTMetadata(tokenUri);
     }
-  }, [tokenUri, tokenId]);
+  }, [tokenUri, tokenId, expectedChainId]);
 
   // Open modal when NFT is successfully minted
   useEffect(() => {
@@ -718,11 +745,27 @@ export default function NftMint() {
 
                   {/* Loading state while getting NFT on-chain */}
                   {isSuccess && !nftMetadata && !isLoadingMetadata && (
-                    <div className="mt-4 flex items-center space-x-3">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
-                      <p className="text-sm text-green-600">
-                        Getting your NFT onchain...
-                      </p>
+                    <div className="mt-4 flex flex-col items-center space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
+                        <p className="text-sm text-green-600">
+                          Getting your NFT onchain...
+                        </p>
+                      </div>
+                      {tokenUriError && (
+                        <div className="text-center">
+                          <p className="text-xs text-red-500 mb-2">
+                            Having trouble loading NFT data on Mainnet
+                          </p>
+                          <Button
+                            onClick={() => refetchTokenUri()}
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            Retry Loading
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
 
