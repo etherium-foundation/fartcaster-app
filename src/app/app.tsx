@@ -11,9 +11,7 @@ export default function App(
   { title }: { title?: string } = { title: APP_NAME }
 ) {
   const { isSDKLoaded, context } = useMiniApp();
-  const [activeTab, setActiveTab] = useState<"frames" | "swap" | "nft">(
-    "nft"
-  );
+  const [activeTab, setActiveTab] = useState<"frames" | "swap" | "nft">("nft");
 
   if (!isSDKLoaded) {
     return <div>Loading...</div>;
@@ -28,7 +26,7 @@ export default function App(
         paddingRight: context?.client.safeAreaInsets?.right ?? 0,
       }}
     >
-      <div className="mx-auto py-2 px-4">
+      <div className="mx-auto">
         <h1 className="text-2xl font-bold text-center mb-4">{title}</h1>
 
         {/* Tab Navigation */}
