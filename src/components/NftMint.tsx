@@ -41,7 +41,12 @@ import {
   Heart,
 } from "lucide-react";
 import Image from "next/image";
-import { format, formatDistanceToNow, fromUnixTime } from "date-fns";
+import {
+  format,
+  formatDistanceToNow,
+  fromUnixTime,
+  intervalToDuration,
+} from "date-fns";
 
 interface NFTMetadata {
   name: string;
@@ -197,7 +202,7 @@ export default function NftMint() {
   // Get next window from hardcoded windows
   const nextWindow = currentMintingWindowNumber
     ? HARDCODED_WINDOWS.find(
-        (window) => window.windowNumber === currentMintingWindowNumber + 1 - 1 // Zero indexed
+        (window) => window.windowNumber === currentMintingWindowNumber + 1
       ) || null // If no next window found (we're at the last window), return null
     : HARDCODED_WINDOWS[0]; // If no current window, show the first available window
 
@@ -215,12 +220,35 @@ export default function NftMint() {
     return format(fromUnixTime(timestamp), "PPP 'at' p");
   };
 
-  // Calculate time until next window
+  // Calculate time until next window using date-fns
   const getTimeUntilNextWindow = (): string => {
     if (!nextWindow) return "No future windows available";
 
     const nextWindowDate = fromUnixTime(nextWindow.start);
     return formatDistanceToNow(nextWindowDate, { addSuffix: true });
+  };
+
+  // Calculate time remaining in current window using date-fns
+  const getTimeRemainingInWindow = (): string => {
+    if (!currentWindow || !isMintingAvailable) return "";
+
+    const now = new Date();
+    const windowEnd = fromUnixTime(currentWindow.end);
+
+    if (windowEnd <= now) return "Window closed";
+
+    const duration = intervalToDuration({ start: now, end: windowEnd });
+
+    // Custom compact format with abbreviated units
+    const { days = 0, hours = 0, minutes = 0, seconds = 0 } = duration;
+
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (seconds > 0) parts.push(`${seconds}s`);
+
+    return parts.join(" ") || "0s";
   };
 
   // Get year from timestamp
@@ -570,6 +598,40 @@ export default function NftMint() {
                     }}
                     className="w-full bg-amber-500 hover:bg-amber-600 text-white border-amber-600 hover:border-amber-700 transition-colors duration-200"
                   />
+                </div>
+              </div>
+            )}
+
+            {/* Countdown Timer - Show when minting is available */}
+            {isMintingAvailable && currentWindow && (
+              <div className="bg-gradient-to-br from-red-50 via-orange-50 to-red-100 rounded-2xl p-6 border-2 border-red-300 shadow-xl hover:shadow-2xl transition-all duration-300 animate-pulse">
+                <div className="flex items-center space-x-3 mb-3">
+                  <div className="bg-red-500 rounded-full p-2 animate-bounce">
+                    <Clock className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-bold text-red-700 animate-pulse">
+                    ⚡ MINTING WINDOW CLOSING ⚡
+                  </span>
+                </div>
+                {/* Countdown Timer */}
+                <div className="mt-4 pt-4 border-t border-red-200">
+                  <div className="text-center space-y-3">
+                    <p className="text-sm font-bold text-red-700 uppercase tracking-wider">
+                      ⚠️ Time Running Out! ⚠️
+                    </p>
+                    <div className="text-3xl font-black text-red-900 font-mono bg-white/50 rounded-xl p-4 border-2 border-red-400 animate-pulse">
+                      {getTimeRemainingInWindow()}
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-bold text-red-800">
+                        🚨 DON&apos;T MISS YOUR CHANCE! 🚨
+                      </p>
+                      <p className="text-xs text-red-600">
+                        💎 Next window opens {getTimeUntilNextWindow()} -
+                        Don&apos;t wait!
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
