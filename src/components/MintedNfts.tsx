@@ -5,16 +5,9 @@ import { useAccount } from "wagmi";
 import { hexToBigInt } from "viem";
 import { Button } from "@/components/ui/button";
 import { ShareButton } from "@/components/ui/Share";
-import {
-  Sparkles,
-  Wallet,
-  Image as ImageIcon,
-  ExternalLink,
-  RefreshCw,
-  Heart,
-} from "lucide-react";
-import Image from "next/image";
+import { Sparkles, Wallet, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { ithnftAddress } from "@/wagmi/generated";
+import Image from "next/image";
 
 interface NFTMetadata {
   name: string;
@@ -42,7 +35,7 @@ interface AlchemyNFT {
     raw: string;
     gateway: string;
   };
-  media: any[];
+  media: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
   metadata: {
     image: string;
     external_url?: string;
@@ -242,7 +235,7 @@ export default function MintedNfts() {
           {/* NFT Gallery */}
           {!isLoading && userNfts.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {userNfts.map((nft, index) => (
+              {userNfts.map((nft) => (
                 <div
                   key={nft.tokenId}
                   className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
@@ -264,7 +257,9 @@ export default function MintedNfts() {
                       {/* NFT Image */}
                       <div className="relative">
                         <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-blue-500 rounded-xl blur-lg opacity-20"></div>
-                        <img
+                        <Image
+                          width={256}
+                          height={256}
                           src={nft.metadata.image}
                           alt={nft.metadata.name}
                           className="relative w-full h-48 object-cover rounded-xl"
@@ -333,8 +328,8 @@ export default function MintedNfts() {
                 No NFTs Found
               </h3>
               <p className="text-gray-600 mt-2">
-                You haven't minted any NFTs yet. Head to the NFT Mint tab to get
-                started!
+                You haven&apos;t minted any NFTs yet. Head to the NFT Mint tab
+                to get started!
               </p>
               <div className="mt-6">
                 <Button
