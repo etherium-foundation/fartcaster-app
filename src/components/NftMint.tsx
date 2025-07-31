@@ -200,11 +200,21 @@ export default function NftMint() {
     : null;
 
   // Get next window from hardcoded windows
-  const nextWindow = currentMintingWindowNumber
-    ? HARDCODED_WINDOWS.find(
-        (window) => window.windowNumber === currentMintingWindowNumber + 1
-      ) || null // If no next window found (we're at the last window), return null
-    : HARDCODED_WINDOWS[0]; // If no current window, show the first available window
+  const getNextWindow = (): MintingWindow | null => {
+    const now = Math.floor(Date.now() / 1000);
+
+    // Find the first window that starts in the future
+    const futureWindow = HARDCODED_WINDOWS.find((window) => window.start > now);
+
+    if (futureWindow) {
+      return futureWindow;
+    }
+
+    // If no future windows, return null
+    return null;
+  };
+
+  const nextWindow = getNextWindow();
 
   // Update current time every second
   useEffect(() => {
@@ -225,7 +235,12 @@ export default function NftMint() {
     if (!nextWindow) return "No future windows available";
 
     const nextWindowDate = fromUnixTime(nextWindow.start);
-    return formatDistanceToNow(nextWindowDate, { addSuffix: true });
+    const now = new Date();
+
+    // For future dates, show "Opens in X time"
+    return `Opens ${formatDistanceToNow(nextWindowDate, {
+      addSuffix: false,
+    })} from now`;
   };
 
   // Calculate time remaining in current window using date-fns
@@ -576,10 +591,10 @@ export default function NftMint() {
                   {getYearFromTimestamp(nextWindow?.start || 0)})
                 </p>
                 <p className="text-xs text-amber-600">
-                  Opens: {getTimeUntilNextWindow()}
+                  {getTimeUntilNextWindow()}
                 </p>
                 <p className="text-xs text-amber-600 mt-1">
-                  Opens: {formatTimestamp(nextWindow?.start || 0)}
+                  Exact time: {formatTimestamp(nextWindow?.start || 0)}
                 </p>
 
                 {/* Share Button with Humorous Message */}
@@ -627,8 +642,7 @@ export default function NftMint() {
                         🚨 DON&apos;T MISS YOUR CHANCE! 🚨
                       </p>
                       <p className="text-xs text-red-600">
-                        💎 Next window opens {getTimeUntilNextWindow()} -
-                        Don&apos;t wait!
+                        💎 {getTimeUntilNextWindow()} - Don&apos;t wait!
                       </p>
                     </div>
                   </div>
