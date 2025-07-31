@@ -203,7 +203,7 @@ export default function NftMint() {
   // Get next window from hardcoded windows
   const nextWindow = currentMintingWindowNumber
     ? HARDCODED_WINDOWS.find(
-        (window) => window.windowNumber === currentMintingWindowNumber + 1 - 1 // Zero indexed
+        (window) => window.windowNumber === currentMintingWindowNumber + 1
       ) || null // If no next window found (we're at the last window), return null
     : HARDCODED_WINDOWS[0]; // If no current window, show the first available window
 
@@ -628,8 +628,8 @@ export default function NftMint() {
                         🚨 DON'T MISS YOUR CHANCE! 🚨
                       </p>
                       <p className="text-xs text-red-600">
-                        💎 Next window is in {getTimeUntilNextWindow()} - Don't
-                        wait!
+                        💎 Next window opens {getTimeUntilNextWindow()} -
+                        Don&apos;t wait!
                       </p>
                     </div>
                   </div>
