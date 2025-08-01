@@ -43,12 +43,12 @@ function useCoinbaseWalletAutoConnect() {
 }
 
 export const config = createConfig({
-  chains: [mainnet, base],
+  chains: [base, mainnet],
   transports: {
+    [base.id]: http(),
     [mainnet.id]: http(
       "https://mainnet.infura.io/v3/25624dd15a7744e8baf63a2f85086c68"
     ),
-    [base.id]: http(),
   },
   connectors: [
     farcasterFrame(),
